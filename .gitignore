@@ -1,0 +1,26 @@
+# Secrets and credentials
+.secrets/
+.clawhub/
+.openclaw/
+
+# Node modules
+node_modules/
+*/node_modules/
+
+# Cache and temp files
+*.log
+.DS_Store
+.cache/
+.temp/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+Thumbs.db

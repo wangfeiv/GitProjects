@@ -1,31 +1,44 @@
-# SKILL.md — 多多学习助手 (duoduo-study)
-
-## 描述
-多多（北京朝阳区四年级）的错题管理与复习助手。
-支持数学（人教版）、语文（人教版）、英语（北京出版社）三科的错题录入、知识点追踪和复习计划生成。
-
-## 触发条件
-以下情况激活本 Skill：
-- 用户提到"多多"+"错题/作业/考试/薄弱/复习"等词
-- 用户上传题目图片并说明科目
-- 用户请求"生成复习计划"
-- 用户查询"多多[科目]哪里薄弱/错题汇总"
-
+---
+name: duoduo-study
+description: Manage Duoduo's study error bank, review plans, and same-type practice generation for grade-4 elementary school subjects. Use when users mention 多多 and ask to record wrong questions, upload or analyze homework/test images, summarize weak points, generate review plans, update mastery status, or create similar exercises for math (PEP), Chinese (PEP), or English (Beijing Press).
 ---
 
-## 数据目录
+# duoduo-study
 
-```
+## Overview
+
+Use this skill to maintain a persistent, structured study system for 多多（北京市朝阳区，小学四年级下学期，男） across three subjects:
+- 数学：人民教育出版社
+- 语文：人民教育出版社
+- 英语：北京出版社
+
+This skill supports:
+1. 错题录入（文本、单图、多图）
+2. 错题库分类整理（按学科、知识点、时间）
+3. 薄弱点查询与知识点掌握追踪
+4. 个性化复习计划生成
+5. 基于错题生成同类型练习题与答案
+
+Everything must be stored on disk so users can come back later and continue managing the system.
+
+## Data Layout
+
+All persistent data lives under:
+
+`~/.openclaw/workspace/duoduo/`
+
+Structure:
+
+```text
 ~/.openclaw/workspace/duoduo/
-├── README.md
 ├── assets/
-│   ├── math/        # 数学题目图片，命名规则：YYYYMMDD-N.jpg
-│   ├── chinese/     # 语文题目图片
-│   └── english/     # 英语题目图片
+│   ├── math/
+│   ├── chinese/
+│   └── english/
 ├── math/
-│   ├── errors.md    # 数学错题本
-│   ├── knowledge.md # 数学知识点库
-│   └── review.md    # 数学复习计划
+│   ├── errors.md
+│   ├── knowledge.md
+│   └── review.md
 ├── chinese/
 │   ├── errors.md
 │   ├── knowledge.md
@@ -36,124 +49,385 @@
     └── review.md
 ```
 
----
+Read `references/storage-schema.md` when you need the exact table structures, field meanings, or recommended output filenames.
 
-## 操作流程
+## Subject Mapping
 
-### 1. 录入错题
+Map user inputs to subjects like this:
+- 数学 / math / 算术 / 应用题 → `math`
+- 语文 / chinese / 阅读 / 字词 / 作文 → `chinese`
+- 英语 / english / 单词 / 语法 / 阅读 → `english`
 
-**输入形式：**
-- 纯文字描述
-- 图片（保存到 assets/ 后录入）
-- 文字 + 图片
+If the subject is unclear, infer from the problem content first. Only ask the user if confidence is low.
 
-**处理步骤：**
-1. 判断科目（数学/语文/英语）
-2. 若有图片 → 保存至 `assets/{科目}/YYYYMMDD-N.jpg`，N为当日序号
-3. 解析题目内容，按以下模板写入对应 `errors.md`
-4. 同步更新 `knowledge.md` 中对应知识点的掌握度
-5. 更新 `errors.md` 顶部汇总表
+## Core Workflow Decision Tree
 
-**错题标准模板：**
+### A. User wants to record a wrong question
+Use the **Wrong Question Intake Workflow**.
+
+Triggers include:
+- “多多今天数学有一道错题”
+- “帮我记录这道题”
+- “把这几张图片整理进错题库”
+- “这是多多英语错题”
+
+### B. User wants a review plan
+Use the **Review Plan Workflow**.
+
+Triggers include:
+- “生成本周复习计划”
+- “帮多多安排一下数学复习”
+- “多多最近该复习什么”
+
+### C. User wants same-type exercises
+Use the **Practice Generation Workflow**.
+
+Triggers include:
+- “根据错题出几道同类型题”
+- “生成练习题”
+- “按多多的薄弱点出一套题”
+
+### D. User wants weak-point summary
+Use the **Weak Point Query Workflow**.
+
+Triggers include:
+- “多多数学哪里薄弱”
+- “汇总一下英语弱项”
+- “哪些知识点还没掌握”
+
+### E. User wants to mark progress
+Use the **Mastery Update Workflow**.
+
+Triggers include:
+- “这个知识点已经掌握了”
+- “错题 #5 已掌握”
+- “把这项改成练习中”
+
+## Wrong Question Intake Workflow
+
+### Step 1: Determine input type
+There are three valid intake modes:
+1. 文本录入
+2. 图片录入
+3. 多张图片 + 文字补充录入
+
+### Step 2: Validate required information
+For text-only intake, the problem statement is required.
+
+Required minimum fields:
+- subject
+- problem statement
+
+Strongly preferred fields:
+- source（作业 / 单元测试 / 日常考试 / 课堂练习 / 家长补充）
+- Duoduo's wrong answer
+- correct answer
+- mistake reason
+
+If some preferred fields are missing, still record the entry and mark unknown fields clearly.
+
+### Step 3: Save uploaded images
+If images are provided:
+- Save them under `assets/{subject}/`
+- Naming format: `YYYYMMDD-N.jpg`
+- `N` is the sequence number for that subject on that date
+- If multiple images belong to one question, save them all and list them together in the record
+
+When multiple images describe a single question:
+- merge them into one wrong-question entry
+- preserve all image paths in the “原始图片” field
+- do not create duplicate entries unless the images are clearly separate questions
+
+### Step 4: Extract and normalize the question
+When the input contains images:
+- read the image content
+- extract question text
+- normalize it into clean text
+- if the image includes multiple sub-questions, decide whether they belong to one concept cluster or separate entries
+- prefer one entry per concept unless the questions are clearly independent and should be tracked separately
+
+### Step 5: Write to errors.md
+Append a new entry using this exact template:
+
 ```markdown
 ## 错题 #N：[知识点简述]
 
 - **日期：** YYYY-MM-DD
-- **来源：** 作业 / 单元测试 / 日常考试 / 薄弱点录入
-- **原始图片：** assets/{科目}/YYYYMMDD-N.jpg （无图片填"无"）
+- **来源：** 作业 / 单元测试 / 日常考试 / 课堂练习 / 薄弱点录入 / 家长补充
+- **原始图片：** assets/{subject}/YYYYMMDD-1.jpg；assets/{subject}/YYYYMMDD-2.jpg（无图片填“无”）
 - **题目：** ...
-- **多多的答案：** ...（薄弱点录入可填"未作答"）
-- **正确答案：** ...
+- **多多的答案：** ...（未知可写“未提供”）
+- **正确答案：** ...（未知可写“待补充”）
 - **错因分析：** ...
 - **解题思路：** ...
 - **知识点标签：** #标签1 #标签2
-- **复习优先级：** ⭐~⭐⭐⭐⭐⭐
-- **复习状态：** ❌ 未掌握
-- **下次复习日期：** YYYY-MM-DD（录入日+3天）
+- **复习优先级：** ⭐ / ⭐⭐ / ⭐⭐⭐ / ⭐⭐⭐⭐ / ⭐⭐⭐⭐⭐
+- **复习状态：** ❌ 未掌握 / 🔄 练习中 / ✅ 已掌握
+- **下次复习日期：** YYYY-MM-DD
 ```
 
-**录入后同步更新汇总表：**
-在 `errors.md` 顶部汇总表新增一行。
+### Step 6: Update top summary table
+At the top of `errors.md`, maintain a summary table with at least these columns:
 
----
+```markdown
+| # | 日期 | 来源 | 知识点 | 优先级 | 状态 |
+```
 
-### 2. 录入薄弱点（无具体错题）
+Every new wrong-question entry must also be reflected in this table.
 
-用户说：「多多语文[知识点X]掌握不好」
+### Step 7: Update knowledge.md
+For every intake:
+- identify the main knowledge point(s)
+- add or update them in `knowledge.md`
+- mark mastery status consistently with the wrong-question entry
 
-处理步骤：
-1. 在对应科目 `errors.md` 中以"薄弱点录入"来源创建条目
-2. 题目填"薄弱点"，多多答案填"未作答"
-3. 在 `knowledge.md` 将该知识点标记为 ❌ 未掌握
+Recommended structure for `knowledge.md`:
 
----
+```markdown
+# 知识点掌握情况
 
-### 3. 生成每周复习计划
+| 知识点 | 科目 | 当前状态 | 相关错题 | 最近更新 |
+|--------|------|----------|----------|----------|
+| 乘法分配律 | 数学 | ❌ 未掌握 | #8, #10, #15 | 2026-04-16 |
+```
 
-用户说：「生成本周复习计划」或「生成多多这周的复习计划」
+## Weak-Point Intake Workflow
 
-处理步骤：
-1. 读取三科 `errors.md`，筛选出：
-   - 状态为 ❌ 未掌握 的条目（优先）
-   - 状态为 🔄 练习中 且下次复习日期已到的条目
-2. 按优先级 + 科目均衡分配，生成本周计划
-3. 写入对应科目 `review.md` 的"本周复习计划"区块
-4. 向用户输出汇总版（三科合并）
+If the user reports a weakness without a specific question, create a lightweight wrong-question record.
 
----
+Use:
+- 来源：薄弱点录入
+- 题目：薄弱点
+- 多多的答案：未作答
+- 正确答案：不适用
 
-### 4. 更新复习状态
+Still update:
+- `errors.md`
+- summary table
+- `knowledge.md`
 
-用户说：「多多已经掌握了[知识点]」或「[错题#N]已掌握」
+## Review Plan Workflow
 
-处理步骤：
-1. 在 `errors.md` 中找到对应条目
-2. 将复习状态从 ❌/🔄 改为 ✅ 已掌握
-3. 清空"下次复习日期"或标注"已掌握，无需复习"
-4. 同步更新 `knowledge.md` 中对应知识点的掌握度
+When generating a review plan:
 
----
+### Step 1: Read all three subjects
+Read:
+- `math/errors.md`
+- `chinese/errors.md`
+- `english/errors.md`
 
-### 5. 查询薄弱点
+### Step 2: Select review candidates
+Prioritize in this order:
+1. ❌ 未掌握
+2. 🔄 练习中 and review date is due
+3. high-priority topics with repeated mistakes
 
-用户说：「多多数学/语文/英语哪里薄弱？」
+### Step 3: Balance subjects
+Do not overload one subject unless the user explicitly asks for a single-subject plan.
 
-处理步骤：
-1. 读取对应科目 `knowledge.md`
-2. 筛选所有 ❌ 未掌握 的知识点
-3. 输出分类汇总
+### Step 4: Write to review.md
+Append a dated review block instead of overwriting old content.
 
----
+Suggested format:
 
-### 6. 主动录入触发
+```markdown
+## 本周复习计划（YYYY-MM-DD）
 
-用户直接发送以下内容时自动激活：
-- 「多多今天[科目]作业错了...」
-- 「多多[科目]单元测试有几道错题...」
-- 上传图片 + 说明「这是多多的[科目]题」
+### 数学
+- 复习：乘法分配律（对应错题 #8 #10 #15）
+- 练习：同类题 4 道
 
----
+### 语文
+- 复习：...
 
-## 科目与教材
+### 英语
+- 复习：...
 
-| 科目 | 教材 | 年级 |
-|------|------|------|
-| 数学 | 人教版 | 四年级下册 |
-| 语文 | 人教版 | 四年级下册 |
-| 英语 | 北京出版社 | 四年级 |
+## 历史记录
+- 保留旧计划
+```
 
----
+### Step 5: Return a user-friendly summary
+In chat, provide a concise merged summary of the plan.
 
-## 图片命名规范
+## Practice Generation Workflow
 
-- 格式：`YYYYMMDD-N.jpg`（N为当日该科目第几张，从1开始）
-- 示例：数学2026年4月8日第一张 → `assets/math/20260408-1.jpg`
+Generate same-type exercises from either:
+- one specific wrong question
+- one knowledge point
+- a group of weak points
 
----
+### Rules for generated exercises
+1. Keep the same concept, but change the surface numbers, wording, or context
+2. Match 多多's grade level: 小学四年级下学期
+3. Match the textbook style when possible
+4. Avoid copying the original wrong question verbatim unless the user asks for a re-do version
+5. Do not drift away from the original question type
+6. Include answers
+7. Include short explanations when useful
+8. Always label question type
+9. Always label difficulty level
 
-## 注意事项
+### Required structure for generated practice
+Generated practice must explicitly include:
+- 题目类型：选择题 / 填空题 / 计算题 / 解答题 / 阅读题 / 应用题 / 其他
+- 难易程度：基础 / 中等 / 提高
+- 题目正文
+- 参考答案
+- 简短解析（适合小学生理解）
 
-1. 每次录入后**务必更新汇总表**，保持 errors.md 顶部数据准确
-2. 知识点掌握度变化时**同步更新 knowledge.md**
-3. 复习计划生成后写入 review.md，**不要覆盖历史记录**，追加到"历史复习记录"表
-4. 图片存入 assets/ 后，错题中填写**相对路径**（从 duoduo/ 目录起）
+### Output formats
+Use one of these depending on the request:
+- 单题练习
+- 同类题 3~5 道
+- 小卷（5~15 道）
+- 综合复习卷（含答案）
+- 同类型变式练习卷（可导出 Word）
+
+### Variant practice workflow
+When the user explicitly wants same-type variants in a Word paper:
+1. Prefer reading `references/variant-practice-workflow.md`
+2. Prefer running `scripts/build_variant_practice_seed_json.py`
+3. Use the seed JSON to generate final variant questions in the same JSON schema required by `generate_review_docx.py`
+4. Then use `scripts/generate_review_docx.py` to produce the final docx
+
+### Storage rule
+If the user asks to save the generated exercises or review material:
+- save under the appropriate subject folder
+- prefer markdown or docx depending on the request
+- make filenames clear and date-based
+
+## Word Review Paper Generation Workflow
+
+Use this workflow when the user asks for:
+- Word 复习卷
+- Word 练习卷
+- 可打印试卷
+- 错题复习卷 docx
+
+### Mandatory rules for Word output
+1. Use pure readable text in the final document
+2. Do not include LaTeX, markdown math, XML fragments, escaped symbols, or other special formula syntax
+3. Avoid any content that could render as乱码 or broken symbols in Word
+4. Questions must come strictly from the wrong-question bank's concepts and question patterns
+5. Same-type generated questions may vary numbers, wording, or context, but must not drift away from the original type
+6. The paper must clearly separate sections such as 选择题、填空题、计算题、解答题
+7. Every generated question must carry a difficulty label: 基础 / 中等 / 提高
+8. The document must include a separate answer section with clear explanations
+9. Prefer plain Chinese punctuation and simple formatting
+10. Before finalizing, sanity-check that the content has no strange symbols and that all questions are valid grade-4 level questions
+11. Prefer using `scripts/build_review_json.py` + `scripts/generate_review_docx.py` for docx generation
+12. Read `references/word-generation.md` when you need the JSON structure and script workflow
+13. Read `references/closed-loop-workflow.md` when generating a full review paper from the stored wrong-question bank
+14. Prefer `scripts/build_review_docx_from_errors.py` when the user wants a direct one-command Word paper from `errors.md`
+15. Read `references/one-command-workflow.md` when you need the direct end-to-end command pattern
+
+### Required paper structure
+When generating a review paper, include:
+1. 标题
+2. 学生信息栏（姓名、日期、用时、得分）
+3. 试卷说明
+4. 按题型分区的题目正文
+5. 每题难易程度标注
+6. 参考答案
+7. 答案解析
+
+### Question sourcing rules
+- Source questions from `errors.md`
+- Group by concept and question type
+- If generating variants, preserve the same concept and same question family
+- Do not invent unrelated topics
+- Prefer repeated weak points and high-priority entries first
+- Exclude any entry that is not self-contained on paper, such as entries whose question/answer/explanation still says “图片中包含…”, “待补充”, “原题图形未完整”, or other signs that the prompt still depends on the source image
+
+### Recommended section order
+A sensible default order is:
+1. 填空题
+2. 选择题
+3. 计算题
+4. 解答题 / 应用题
+
+Adjust by subject when needed.
+
+## Mastery Update Workflow
+
+When the user says a topic or entry is mastered:
+1. Find the corresponding wrong-question entry or knowledge point
+2. Update status to `✅ 已掌握`
+3. Clear or replace next review date with `已掌握，无需复习`
+4. Sync the matching row in `knowledge.md`
+5. Update the summary table if needed
+
+If the user says “still weak” or “needs more practice”:
+- set to `🔄 练习中` or `❌ 未掌握` based on severity
+- assign a new next review date
+
+## Weak Point Query Workflow
+
+When asked where 多多 is weak:
+1. Read the relevant `knowledge.md`
+2. Filter all `❌ 未掌握`
+3. Optionally include `🔄 练习中`
+4. Group by subject and concept
+5. Mention repeated patterns if visible
+
+## Review-Date Guidance
+
+Use these defaults unless the user specifies otherwise:
+- New wrong question: review in 3 days
+- Still not mastered after review: next review in 3 to 5 days
+- Practice-in-progress: next review in 7 days if improving
+- Mastered: no next review needed
+
+## Priority Guidance
+
+Set priority using this heuristic:
+- ⭐⭐⭐⭐⭐: repeated mistakes, core foundations, or highly blocking concepts
+- ⭐⭐⭐⭐: major weak point, likely to reappear soon
+- ⭐⭐⭐: ordinary weak point
+- ⭐⭐: light review needed
+- ⭐: low urgency
+
+## Important Persistence Rules
+
+1. Always persist useful study data to disk
+2. Always keep subject folders separate
+3. Always keep image paths relative to `duoduo/`
+4. Always update the summary table after adding or changing entries
+5. Always sync `knowledge.md` after changing mastery status
+6. Never overwrite historical review plans; append instead
+7. If users ask to regenerate practice sheets or review plans, keep prior files unless explicitly asked to replace them
+
+## Output Style
+
+When chatting with the family:
+- be clear and parent-friendly
+- avoid overly technical wording
+- for 多多, explanations should be age-appropriate
+- when giving practice questions, keep formatting simple and printable
+
+## Minimal Examples
+
+### Example 1: Record one math wrong question
+User: “多多今天数学作业这道题错了，题目是……他的答案是……正确答案是……”
+Action:
+- classify as math
+- append to `duoduo/math/errors.md`
+- update summary table
+- update `duoduo/math/knowledge.md`
+
+### Example 2: Merge multiple images into one wrong-question record
+User: “这 3 张图是同一道英语错题，帮我整理进去”
+Action:
+- save all 3 images to `assets/english/`
+- merge text into one entry
+- record all image paths in one field
+- update errors and knowledge tracking
+
+### Example 3: Generate same-type exercises
+User: “按多多数学里乘法分配律的错题出 5 道同类题，带答案”
+Action:
+- read related math entries
+- generate 5 new problems with varied numbers/context
+- include answers and short explanations
+- save if the user asks
