@@ -1,0 +1,147 @@
+[
+  {
+    "name": "weather",
+    "version": "1.0.0",
+    "description": "Get current weather and forecasts for any location",
+    "author": "openclaw",
+    "keywords": [
+      "weather",
+      "forecast",
+      "temperature"
+    ],
+    "skill": {
+      "runner": "node",
+      "entry": "index.js"
+    },
+    "permissions": [
+      "network"
+    ],
+    "downloads": 0,
+    "rating": 4.5,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/weather/tarball"
+  },
+  {
+    "name": "us-stock-analysis",
+    "version": "1.0.0",
+    "description": "Comprehensive US stock analysis with fundamentals and technicals",
+    "author": "openclaw",
+    "keywords": [
+      "stock",
+      "finance",
+      "investment",
+      "analysis"
+    ],
+    "skill": {
+      "runner": "node",
+      "entry": "index.js"
+    },
+    "permissions": [
+      "network"
+    ],
+    "downloads": 0,
+    "rating": 4.8,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/us-stock-analysis/tarball"
+  },
+  {
+    "name": "duoduo-study",
+    "version": "1.0.0",
+    "description": "Manage study error bank and review plans for elementary school",
+    "author": "openclaw",
+    "keywords": [
+      "education",
+      "study",
+      "math",
+      "chinese",
+      "english"
+    ],
+    "skill": {
+      "runner": "node",
+      "entry": "index.js"
+    },
+    "permissions": [
+      "fs.read",
+      "fs.write"
+    ],
+    "downloads": 0,
+    "rating": 5,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/duoduo-study/tarball"
+  },
+  {
+    "name": "gstack",
+    "version": "1.0.0",
+    "description": "Fast headless browser for QA testing and site dogfooding",
+    "author": "openclaw",
+    "keywords": [
+      "browser",
+      "testing",
+      "qa",
+      "automation"
+    ],
+    "skill": {
+      "runner": "node",
+      "entry": "index.js"
+    },
+    "permissions": [
+      "network",
+      "shell"
+    ],
+    "downloads": 0,
+    "rating": 4.2,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/gstack/tarball"
+  },
+  {
+    "name": "marketing-plan",
+    "version": "1.0.0",
+    "description": "Marketing plan generator with web research and Word output",
+    "author": "openclaw",
+    "keywords": [
+      "marketing",
+      "business",
+      "planning"
+    ],
+    "skill": {
+      "runner": "node",
+      "entry": "index.js"
+    },
+    "permissions": [
+      "network",
+      "fs.write"
+    ],
+    "downloads": 0,
+    "rating": 4,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/marketing-plan/tarball"
+  },
+  {
+    "name": "tavily-web-search",
+    "version": "1.0.0",
+    "description": "Web search using Tavily API for recent information",
+    "author": "openclaw",
+    "keywords": [
+      "search",
+      "web",
+      "research"
+    ],
+    "skill": {
+      "runner": "python",
+      "entry": "scripts/tavily_search.py"
+    },
+    "permissions": [
+      "network"
+    ],
+    "downloads": 0,
+    "rating": 4.3,
+    "createdAt": "2026-05-03T13:15:56.668Z",
+    "updatedAt": "2026-05-03T13:15:56.668Z",
+    "tarballUrl": "http://localhost:1338/v1/skills/tavily-web-search/tarball"
+  }
+]
